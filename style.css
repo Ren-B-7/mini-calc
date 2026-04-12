@@ -1,0 +1,24 @@
+/* Light Mode Defaults */
+window { background-color: #f2f2f7; }
+grid { padding: 10px; }
+entry { background: transparent; color: #000000; border: none; font-size: 20px; padding: 5px; }
+entry.history { font-size: 14px; color: #666666; }
+entry.input { font-size: 28px; font-weight: bold; }
+button { background: #ffffff; background-image: none; color: #000000; border: 1px solid #d1d1d6; font-size: 16px; padding: 10px; border-radius: 5px; }
+button:hover { background: #e5e5ea; }
+button.operator { background: #ff9500; color: #ffffff; border: none; }
+button.clear { background: #ff3b30; color: #ffffff; border: none; }
+button.equal { background: #007aff; color: #ffffff; border: none; }
+button.scientific { background: #e5e5ea; color: #000000; border: 1px solid #c7c7cc; }
+
+/* Dark Mode Overrides */
+window.dark { background-color: #1e1e1e; }
+window.dark entry { background: #2d2d2d; color: #ffffff; border: 1px solid #3d3d3d; }
+window.dark entry.history { color: #888888; background: transparent; border: none; }
+window.dark entry.input { color: #ffffff; background: transparent; border: none; }
+window.dark button { background: #333333; background-image: none; color: #ffffff; border: 1px solid #444444; }
+window.dark button:hover { background: #444444; }
+window.dark button.scientific { background: #2c2c2e; color: #ffffff; border: 1px solid #3a3a3c; }
+window.dark button.operator { background: #ff9500; color: #ffffff; border: none; }
+window.dark button.clear { background: #ff3b30; color: #ffffff; border: none; }
+window.dark button.equal { background: #007aff; color: #ffffff; border: none; }
