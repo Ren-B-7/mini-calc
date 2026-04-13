@@ -246,7 +246,9 @@ double engine_eval(const char* expression, char** error_msg)
 			}
 
 			while (ops.top >= 0 &&
-			 precedence(cstack_peek(&ops)) >= precedence(current_op)) {
+			 (current_op == '^' ?
+			   precedence(cstack_peek(&ops)) > precedence(current_op) :
+			   precedence(cstack_peek(&ops)) >= precedence(current_op))) {
 				char op = cstack_pop(&ops);
 				double v2 = dstack_pop(&values);
 				if (op == 's') {
