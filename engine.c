@@ -24,11 +24,11 @@ typedef struct {
 	int top;
 } CharStack;
 
-static int dstack_push(DoubleStack* s, double v, char** err)
+static inline int dstack_push(DoubleStack* s, double v, const char** err)
 {
 	if (s->top >= MAX_STACK - 1) {
 		if (err && !*err) {
-			*err = g_strdup("Value stack overflow");
+			*err = "Value stack overflow";
 		}
 		return 0;
 	}
@@ -36,16 +36,16 @@ static int dstack_push(DoubleStack* s, double v, char** err)
 	return 1;
 }
 
-static double dstack_pop(DoubleStack* s)
+static inline double dstack_pop(DoubleStack* s)
 {
 	return (s->top >= 0) ? s->data[(s->top)--] : 0.0;
 }
 
-static int cstack_push(CharStack* s, char v, char** err)
+static inline int cstack_push(CharStack* s, char v, const char** err)
 {
 	if (s->top >= MAX_STACK - 1) {
 		if (err && !*err) {
-			*err = g_strdup("Operator stack overflow");
+			*err = "Operator stack overflow";
 		}
 		return 0;
 	}
@@ -53,34 +53,36 @@ static int cstack_push(CharStack* s, char v, char** err)
 	return 1;
 }
 
-static char cstack_pop(CharStack* s)
+static inline char cstack_pop(CharStack* s)
 {
 	return (s->top >= 0) ? s->data[(s->top)--] : '\0';
 }
 
-static char cstack_peek(CharStack* s)
+static inline char cstack_peek(CharStack* s)
 {
 	return (s->top >= 0) ? s->data[s->top] : '\0';
 }
 
-static int precedence(char op)
+static inline int precedence(char op)
 {
-	if (op == '+' || op == '-') {
+	switch (op) {
+	case '+':
+	case '-':
 		return 1;
-	}
-	if (op == '*' || op == '/' || op == '%') {
+	case '*':
+	case '/':
+	case '%':
 		return 2;
-	}
-	if (op == '^') {
+	case '^':
 		return 3;
+	case 's':
+		return 4;
+	default:
+		return 0;
 	}
-	if (op == 's') {
-		return 4; /* sqrt */
-	}
-	return 0;
 }
 
-static double apply_op(double a, double b, char op, char** err)
+static inline double apply_op(double a, double b, char op, const char** err)
 {
 	switch (op) {
 	case '+':
@@ -92,7 +94,7 @@ static double apply_op(double a, double b, char op, char** err)
 	case '/':
 		if (fabs(b) < CALC_EPSILON) {
 			if (err && !*err) {
-				*err = g_strdup("Division by zero");
+				*err = "Division by zero";
 			}
 			return 0.0;
 		}
@@ -100,7 +102,7 @@ static double apply_op(double a, double b, char op, char** err)
 	case '%':
 		if (fabs(b) < CALC_EPSILON) {
 			if (err && !*err) {
-				*err = g_strdup("Modulo by zero");
+				*err = "Modulo by zero";
 			}
 			return 0.0;
 		}
@@ -108,25 +110,21 @@ static double apply_op(double a, double b, char op, char** err)
 	case '^':
 		if (fabs(a) < CALC_EPSILON && b < 0.0) {
 			if (err && !*err) {
-				*err = g_strdup("Zero to a negative power is undefined");
+				*err = "Zero to a negative power is undefined";
 			}
 			return 0.0;
 		}
-		/* Use floor(b) != b instead of fmod(b,1.0) != 0.0 to avoid the
-		 * float equality comparison that -Wfloat-equal correctly rejects. */
 		if (a < 0.0 && fabs(floor(b) - b) > CALC_EPSILON) {
 			if (err && !*err) {
-				*err = g_strdup("Negative base with fractional exponent");
+				*err = "Negative base with fractional exponent";
 			}
 			return 0.0;
 		}
 		return pow(a, b);
 	case 's':
-		/* FIX: Guard against sqrt of a negative number, which would
-		 * silently produce NaN and propagate through further operations. */
 		if (b < 0.0) {
 			if (err && !*err) {
-				*err = g_strdup("Square root of negative number");
+				*err = "Square root of negative number";
 			}
 			return 0.0;
 		}
@@ -139,109 +137,93 @@ double engine_eval(const char* expression, char** error_msg)
 {
 	DoubleStack values = {{0}, -1};
 	CharStack ops = {{0}, -1};
-	int i;
-	int len = (int) strlen(expression);
-
-	if (error_msg) {
-		*error_msg = NULL;
-	}
-
-	for (i = 0; i < len; i++) {
-		if (isspace(expression[i])) {
-			continue;
+	const char* err = NULL;
+	char* clean_expr = malloc(strlen(expression) + 1);
+	int clean_len = 0;
+	for (const char* p = expression; *p; p++) {
+		if (!isspace((unsigned char) *p)) {
+			clean_expr[clean_len++] = *p;
 		}
+	}
+	clean_expr[clean_len] = '\0';
 
-		if (isdigit(expression[i]) || expression[i] == '.') {
+	for (int i = 0; i < clean_len; i++) {
+		char c = clean_expr[i];
+
+		if (isdigit((unsigned char) c) || c == '.') {
 			char* end;
-			double val = g_ascii_strtod(expression + i, &end);
-			if (!dstack_push(&values, val, error_msg)) {
-				return 0.0;
+			double val = g_ascii_strtod(clean_expr + i, &end);
+			if (!dstack_push(&values, val, &err)) {
+				goto error;
 			}
-			i = (int) (end - expression) - 1;
-		} else if (strncmp(expression + i, "PI", 2) == 0) {
-			if (!dstack_push(&values, M_PI, error_msg)) {
-				return 0.0;
+			i = (int) (end - clean_expr) - 1;
+		} else if (c == 'P' && i + 1 < clean_len && clean_expr[i + 1] == 'I') {
+			if (!dstack_push(&values, M_PI, &err)) {
+				goto error;
 			}
 			i += 1;
-		} else if (strncmp(expression + i, "E", 1) == 0
-		 /* FIX: The original read expression[i+1] unconditionally,
-		  * which is UB (and caught by ASan) when 'E' is the last
-		  * character in the string. Bound the check to len first. */
-		 && (i + 1 >= len || !isalpha((unsigned char) expression[i + 1]))) {
-			if (!dstack_push(&values, M_E, error_msg)) {
-				return 0.0;
+		} else if (c == 'E' &&
+		 (i + 1 >= clean_len || !isalpha((unsigned char) clean_expr[i + 1]))) {
+			if (!dstack_push(&values, M_E, &err)) {
+				goto error;
 			}
-		} else if (strncmp(expression + i, "sqrt", 4) == 0) {
-			if (!cstack_push(&ops, 's', error_msg)) {
-				return 0.0;
+		} else if (strncmp(clean_expr + i, "sqrt", 4) == 0) {
+			if (!cstack_push(&ops, 's', &err)) {
+				goto error;
 			}
 			i += 3;
-		} else if (expression[i] == '(') {
-			if (!cstack_push(&ops, '(', error_msg)) {
-				return 0.0;
+		} else if (c == '(') {
+			if (!cstack_push(&ops, '(', &err)) {
+				goto error;
 			}
-		} else if (expression[i] == ')') {
+		} else if (c == ')') {
 			while (ops.top >= 0 && cstack_peek(&ops) != '(') {
 				char op = cstack_pop(&ops);
 				double v2 = dstack_pop(&values);
 				if (op == 's') {
-					/* FIX: Propagate dstack_push failures in all operator-drain
-					 * loops. Previously the return value was silently
-					 * discarded, meaning a stack-full condition set *error_msg
-					 * but execution continued and returned stale data instead
-					 * of 0.0. */
-					if (!dstack_push(&values, apply_op(0, v2, op, error_msg),
-					     error_msg)) {
-						return 0.0;
+					if (!dstack_push(&values, apply_op(0, v2, op, &err),
+					     &err)) {
+						goto error;
 					}
 				} else {
 					double v1 = dstack_pop(&values);
-					if (!dstack_push(&values, apply_op(v1, v2, op, error_msg),
-					     error_msg)) {
-						return 0.0;
+					if (!dstack_push(&values, apply_op(v1, v2, op, &err),
+					     &err)) {
+						goto error;
 					}
 				}
-				if (error_msg && *error_msg) {
-					return 0.0;
+				if (err) {
+					goto error;
 				}
 			}
 			if (ops.top < 0) {
-				if (error_msg) {
-					*error_msg = g_strdup("Mismatched parentheses");
-				}
-				return 0.0;
+				err = "Mismatched parentheses";
+				goto error;
 			}
 			cstack_pop(&ops);
-			/* Check if '(' was preceded by sqrt */
 			if (ops.top >= 0 && cstack_peek(&ops) == 's') {
 				char op = cstack_pop(&ops);
 				double v = dstack_pop(&values);
-				if (!dstack_push(&values, apply_op(0, v, op, error_msg),
-				     error_msg)) {
-					return 0.0;
+				if (!dstack_push(&values, apply_op(0, v, op, &err), &err)) {
+					goto error;
 				}
-				if (error_msg && *error_msg) {
-					return 0.0;
+				if (err) {
+					goto error;
 				}
 			}
-		} else if (strchr("+-*/%^", expression[i])) {
-			char current_op = expression[i];
-			/* Check if it's a unary minus */
+		} else {
+			/* Operator case */
+			char current_op = c;
 			int is_unary = 0;
 			if (current_op == '-') {
-				/* Skip spaces backward to find previous non-space char */
-				int prev = i - 1;
-				while (prev >= 0 && isspace(expression[prev])) {
-					prev--;
-				}
-				if (prev < 0 || strchr("+-*/%^(", expression[prev])) {
+				if (i == 0 || clean_expr[i - 1] == '(') {
 					is_unary = 1;
 				}
 			}
 
 			if (is_unary) {
-				if (!dstack_push(&values, 0.0, error_msg)) {
-					return 0.0;
+				if (!dstack_push(&values, 0.0, &err)) {
+					goto error;
 				}
 			}
 
@@ -252,24 +234,23 @@ double engine_eval(const char* expression, char** error_msg)
 				char op = cstack_pop(&ops);
 				double v2 = dstack_pop(&values);
 				if (op == 's') {
-					/* FIX: Same push-return-value check as above. */
-					if (!dstack_push(&values, apply_op(0, v2, op, error_msg),
-					     error_msg)) {
-						return 0.0;
+					if (!dstack_push(&values, apply_op(0, v2, op, &err),
+					     &err)) {
+						goto error;
 					}
 				} else {
 					double v1 = dstack_pop(&values);
-					if (!dstack_push(&values, apply_op(v1, v2, op, error_msg),
-					     error_msg)) {
-						return 0.0;
+					if (!dstack_push(&values, apply_op(v1, v2, op, &err),
+					     &err)) {
+						goto error;
 					}
 				}
-				if (error_msg && *error_msg) {
-					return 0.0;
+				if (err) {
+					goto error;
 				}
 			}
-			if (!cstack_push(&ops, current_op, error_msg)) {
-				return 0.0;
+			if (!cstack_push(&ops, current_op, &err)) {
+				goto error;
 			}
 		}
 	}
@@ -277,31 +258,35 @@ double engine_eval(const char* expression, char** error_msg)
 	while (ops.top >= 0) {
 		char op = cstack_pop(&ops);
 		if (op == '(') {
-			if (error_msg) {
-				*error_msg = g_strdup("Mismatched parentheses");
-			}
-			return 0.0;
+			err = "Mismatched parentheses";
+			goto error;
 		}
 		double v2 = dstack_pop(&values);
 		if (op == 's') {
-			/* FIX: Same push-return-value check in the final drain loop. */
-			if (!dstack_push(&values, apply_op(0, v2, op, error_msg),
-			     error_msg)) {
-				return 0.0;
+			if (!dstack_push(&values, apply_op(0, v2, op, &err), &err)) {
+				goto error;
 			}
 		} else {
 			double v1 = dstack_pop(&values);
-			if (!dstack_push(&values, apply_op(v1, v2, op, error_msg),
-			     error_msg)) {
-				return 0.0;
+			if (!dstack_push(&values, apply_op(v1, v2, op, &err), &err)) {
+				goto error;
 			}
 		}
-		if (error_msg && *error_msg) {
-			return 0.0;
+		if (err) {
+			goto error;
 		}
 	}
 
-	return dstack_pop(&values);
+	double final_val = dstack_pop(&values);
+	free(clean_expr);
+	return final_val;
+
+error:
+	if (error_msg) {
+		*error_msg = g_strdup(err);
+	}
+	free(clean_expr);
+	return 0.0;
 }
 
 void engine_format_output(char* buf, size_t len, double val)
