@@ -53,7 +53,7 @@ LDFLAGS = -Wl,-z,relro \
           -pie
 
 # Optimization
-OPTFLAGS = -O2
+OPTFLAGS = -O3 -march=native
 
 # GTK flags
 GTK_FLAGS = `pkg-config --cflags --libs gtk+-3.0`
