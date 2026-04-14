@@ -1,7 +1,7 @@
 CC = gcc
 # Strict compilation flags
 CFLAGS = -std=c11 \
-         -pedantic \
+    -pedantic \
          -pedantic-errors \
          -Wall \
          -Wextra \
