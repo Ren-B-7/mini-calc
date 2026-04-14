@@ -84,11 +84,13 @@ format:
 
 CLANG_TIDY_FLAGS = -std=c90 -pedantic -Wall -Wextra -Werror
 
+GTK_CFLAGS_SYSTEM = $(shell pkg-config --cflags gtk+-3.0 | sed 's/-I/-isystem /g')
+
 lint:
-	clang-tidy $(SRCS) -- `pkg-config --cflags gtk+-3.0` $(CLANG_TIDY_FLAGS)
+	clang-tidy $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS)
 
 fix:
-	clang-tidy --fix $(SRCS) -- `pkg-config --cflags gtk+-3.0` $(CLANG_TIDY_FLAGS)
+	clang-tidy --fix $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS)
 
 $(TARGET): $(OBJS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $(TARGET) $(OBJS) $(GTK_FLAGS) -lm
