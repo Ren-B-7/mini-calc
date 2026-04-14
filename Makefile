@@ -1,7 +1,7 @@
 CC = gcc
 # Strict compilation flags
-CFLAGS = -std=c11 \
-    -pedantic \
+CFLAGS = -std=c90 \
+         -pedantic \
          -pedantic-errors \
          -Wall \
          -Wextra \
@@ -15,6 +15,7 @@ CFLAGS = -std=c11 \
          -Wvla \
          -Warray-bounds=2 \
          -Wimplicit-fallthrough=3 \
+         -Wtraditional-conversion \
          -Wshift-overflow=2 \
          -Wcast-qual \
          -Wcast-align=strict \
@@ -50,10 +51,11 @@ LDFLAGS = -Wl,-z,relro \
           -Wl,-z,now \
           -Wl,-z,noexecstack \
           -Wl,-z,separate-code \
-          -pie
+          -pie \
+          -flto
 
 # Optimization
-OPTFLAGS = -O3 -march=native
+OPTFLAGS = -O3 -march=native -flto
 
 # GTK flags
 GTK_FLAGS = `pkg-config --cflags --libs gtk+-3.0`
@@ -77,15 +79,16 @@ asan: clean
 	$(MAKE) ALL_CFLAGS="$(ALL_CFLAGS) -fsanitize=address -g" LDFLAGS="$(LDFLAGS) -fsanitize=address" $(TARGET)
 	@echo "Build complete. Run './calc' with 'ASAN_OPTIONS=detect_leaks=1' to check for leaks."
 
-# Formatting using clang-format
 format:
-	@echo "Formatting code..."
-	clang-format -i $(SRCS) engine.h ui.h
+	clang-format -style=file:./.clang-format -i $(SRCS) engine.h ui.h
 
-# Linting using clang (static analysis)
+CLANG_TIDY_FLAGS = -std=c90 -pedantic -Wall -Wextra -Werror
+
 lint:
-	@echo "Linting with clang..."
-	clang --analyze -Xanalyzer -analyzer-output=text $(SRCS) `pkg-config --cflags gtk+-3.0`
+	clang-tidy $(SRCS) -- `pkg-config --cflags gtk+-3.0` $(CLANG_TIDY_FLAGS)
+
+fix:
+	clang-tidy --fix $(SRCS) -- `pkg-config --cflags gtk+-3.0` $(CLANG_TIDY_FLAGS)
 
 $(TARGET): $(OBJS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $(TARGET) $(OBJS) $(GTK_FLAGS) -lm

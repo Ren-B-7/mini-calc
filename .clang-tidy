@@ -1,0 +1,7 @@
+---
+Checks: '-*,readability-*,bugprone-*,performance-*,clang-analyzer-*'
+WarningsAsErrors: '-*,readability-*,bugprone-*,performance-*,clang-analyzer-*'
+CheckOptions:
+  - key: readability-function-cognitive-complexity.Threshold
+    value: 35
+...
