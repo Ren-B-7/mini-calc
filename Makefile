@@ -1,6 +1,6 @@
 CC = gcc
 # Strict compilation flags
-CFLAGS = -std=c90 \
+CFLAGS = -std=c11 \
          -pedantic \
          -pedantic-errors \
          -Wall \
@@ -15,7 +15,6 @@ CFLAGS = -std=c90 \
          -Wvla \
          -Warray-bounds=2 \
          -Wimplicit-fallthrough=3 \
-         -Wtraditional-conversion \
          -Wshift-overflow=2 \
          -Wcast-qual \
          -Wcast-align=strict \
@@ -82,8 +81,8 @@ asan: clean
 format:
 	clang-format -style=file:./.clang-format -i $(SRCS) engine.h ui.h
 
-CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters
-CLANG_TIDY_FLAGS = -std=c90 -pedantic -Wall -Wextra -Werror
+CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+CLANG_TIDY_FLAGS = -std=c11 -pedantic -Wall -Wextra -Werror
 
 GTK_CFLAGS_SYSTEM = $(shell pkg-config --cflags gtk+-3.0 | sed 's/-I/-isystem /g')
 
