@@ -8,34 +8,34 @@
 
 static int handle_cli(int argc, char** argv)
 {
-	GString* expr = g_string_new("");
-	char* err = NULL;
-	double res;
-	int i;
+	GString* expression_str = g_string_new("");
+	char* error_msg = NULL;
+	double result_val;
+	int arg_index;
 
-	for (i = 1; i < argc; i++) {
-		g_string_append(expr, argv[i]);
-		if (i < argc - 1) {
-			g_string_append_c(expr, ' ');
+	for (arg_index = 1; arg_index < argc; arg_index++) {
+		g_string_append(expression_str, argv[arg_index]);
+		if (arg_index < argc - 1) {
+			g_string_append_c(expression_str, ' ');
 		}
 	}
 
-	res = engine_eval(expr->str, &err);
+	result_val = engine_eval(expression_str->str, &error_msg);
 
-	if (err) {
-		fprintf(stderr, "Error: %s\n", err);
-		g_free(err);
-		g_string_free(expr, TRUE);
+	if (error_msg) {
+		fprintf(stderr, "Error: %s\n", error_msg);
+		g_free(error_msg);
+		g_string_free(expression_str, TRUE);
 		return 1;
 	}
 
 	{
-		char res_str[64];
-		engine_format_output(res_str, sizeof(res_str), res);
+		char res_str[CALC_BUF_SIZE];
+		engine_format_output(res_str, sizeof(res_str), result_val);
 		printf("%s\n", res_str);
 	}
 
-	g_string_free(expr, TRUE);
+	g_string_free(expression_str, TRUE);
 	return 0;
 }
 
