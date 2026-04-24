@@ -8,10 +8,17 @@
 
 static int handle_cli(int argc, char** argv)
 {
-	GString* expression_str = g_string_new("");
+	GString* expression_str;
 	char* error_msg = NULL;
 	double result_val;
 	int arg_index;
+
+	expression_str = g_string_new("");
+	if (expression_str == NULL) {
+		fprintf(stderr,
+		 "Error: Failed to allocate memory for expression string\n");
+		return 1;
+	}
 
 	for (arg_index = 1; arg_index < argc; arg_index++) {
 		g_string_append(expression_str, argv[arg_index]);
@@ -22,7 +29,7 @@ static int handle_cli(int argc, char** argv)
 
 	result_val = engine_eval(expression_str->str, &error_msg);
 
-	if (error_msg) {
+	if (error_msg != NULL) {
 		fprintf(stderr, "Error: %s\n", error_msg);
 		g_free(error_msg);
 		g_string_free(expression_str, TRUE);

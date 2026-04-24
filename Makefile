@@ -1,6 +1,7 @@
 CC = gcc
+
 # Strict compilation flags
-CFLAGS = -std=c11 \
+CFLAGS = -std=c99 \
          -pedantic \
          -pedantic-errors \
          -Wall \
@@ -35,8 +36,8 @@ CFLAGS = -std=c11 \
          -Wwrite-strings \
          -Wfloat-equal \
          -Wpointer-arith \
-         -Wbad-function-cast \
-         -Wold-style-definition
+         -Wold-style-definition \
+         -I src
 
 # Security hardening flags
 HARDENING = -D_FORTIFY_SOURCE=2 \
@@ -59,12 +60,23 @@ OPTFLAGS = -O3 -march=native -flto
 # GTK flags
 GTK_FLAGS = `pkg-config --cflags --libs gtk+-3.0`
 
+# Source file search path
+VPATH = src
+
 # Combine all flags
 ALL_CFLAGS = $(CFLAGS) $(HARDENING) $(OPTFLAGS)
 
-TARGET = calc
-OBJS = main.o engine.o ui.o resources.o
-SRCS = main.c engine.c ui.c
+# Output directories
+BIN_DIR = bin
+OBJ_DIR = bin/obj
+SRC_DIR = src
+ASSETS_DIR = assets
+
+TARGET = $(BIN_DIR)/calc
+SRCS = $(SRC_DIR)/main.c $(SRC_DIR)/engine.c $(SRC_DIR)/ui.c
+OBJS = $(OBJ_DIR)/main.o $(OBJ_DIR)/engine.o $(OBJ_DIR)/ui.o $(OBJ_DIR)/resources.o
+HEADERS = $(SRC_DIR)/engine.h $(SRC_DIR)/ui.h
+RESOURCES_SRC = $(OBJ_DIR)/resources.c
 
 .PHONY: all clean install test run format lint asan
 
@@ -76,30 +88,42 @@ run: $(TARGET)
 # Build with AddressSanitizer
 asan: clean
 	$(MAKE) ALL_CFLAGS="$(ALL_CFLAGS) -fsanitize=address -g" LDFLAGS="$(LDFLAGS) -fsanitize=address" $(TARGET)
-	@echo "Build complete. Run './calc' with 'ASAN_OPTIONS=detect_leaks=1' to check for leaks."
+	@echo "Build complete. Run './$(TARGET)' with 'ASAN_OPTIONS=detect_leaks=1' to check for leaks."
 
 format:
-	clang-format -style=file:./.clang-format -i $(SRCS) engine.h ui.h
+	clang-format -style=file:./.clang-format -i $(SRCS) $(HEADERS)
+	mbake format --config ./.bake.toml Makefile
 
 CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
 CLANG_TIDY_FLAGS = -std=c11 -pedantic -Wall -Wextra -Werror
 
-GTK_CFLAGS_SYSTEM = $(shell pkg-config --cflags gtk+-3.0 | sed 's/-I/-isystem /g')
-
 lint:
 	clang-tidy $(CLANG_TIDY_CHECKS) $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS)
+	mbake validate --config ./.bake.toml Makefile
 
 fix:
 	clang-tidy --fix $(CLANG_TIDY_CHECKS) $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS)
 
-$(TARGET): $(OBJS)
+$(BIN_DIR):
+	mkdir -p $(BIN_DIR)
+
+$(OBJ_DIR):
+	mkdir -p $(OBJ_DIR)
+
+$(TARGET): $(BIN_DIR) $(OBJ_DIR) $(OBJS)
 	$(CC) $(ALL_CFLAGS) $(LDFLAGS) -o $(TARGET) $(OBJS) $(GTK_FLAGS) -lm
 
-resources.c: calc.gresource.xml style.css
-	glib-compile-resources calc.gresource.xml --target=resources.c --generate-source
+$(RESOURCES_SRC): $(ASSETS_DIR)/calc.gresource.xml $(ASSETS_DIR)/style.css | $(OBJ_DIR)
+	cd $(ASSETS_DIR) && glib-compile-resources calc.gresource.xml --target=../$(RESOURCES_SRC) --generate-source
 
-%.o: %.c
-	$(CC) $(ALL_CFLAGS) `pkg-config --cflags gtk+-3.0` -c $< -o $@
+# Convert GTK include paths to system includes to suppress external library warnings
+GTK_CFLAGS_SYSTEM = $(shell pkg-config --cflags gtk+-3.0 | sed 's/-I/-isystem /g')
+
+$(OBJ_DIR)/resources.o: $(RESOURCES_SRC) | $(OBJ_DIR)
+	$(CC) $(ALL_CFLAGS) $(GTK_CFLAGS_SYSTEM) -c $(RESOURCES_SRC) -o $@
+
+$(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
+	$(CC) $(ALL_CFLAGS) $(GTK_CFLAGS_SYSTEM) -c $< -o $@
 
 # Tests for CLI mode
 test: $(TARGET)
@@ -121,4 +145,4 @@ install: $(TARGET)
 	install -m 755 $(TARGET) $(HOME)/.local/bin/
 
 clean:
-	rm -f $(TARGET) $(OBJS) resources.c
+	rm -rf $(BIN_DIR)
