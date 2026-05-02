@@ -1,58 +1,88 @@
-# Prerequisites
-*.d
-
-# Object files
+# Build artifacts
 *.o
-*.ko
 *.obj
+*.ko
 *.elf
-
-# Linker output
-*.ilk
-*.map
-*.exp
-
-# Precompiled Headers
-*.gch
-*.pch
-
-# Libraries
-*.lib
-*.a
-*.la
-*.lo
-
-# Shared objects (inc. Windows DLLs)
-*.dll
 *.so
 *.so.*
 *.dylib
-
-# Executables
+*.a
+*.la
+*.lo
+*.lib
+*.dll
 *.exe
 *.out
 *.app
 *.i*86
 *.x86_64
 *.hex
+*.gch
+*.pch
 
-# Debug files
+# Build directories
+build/
+out/
+dist/
+bin/
+obj/
+target/
+.tmp_versions/
+
+# Debugging & profiling
 *.dSYM/
 *.su
 *.idb
 *.pdb
+*.dwo
+*.gcno
+*.gcda
+*.gcov
+*.prof
+*.profdata
+*.cov
+*.dyn
 
-# Kernel Module Compile Results
-*.mod*
-*.cmd
-.tmp_versions/
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.json
+
+# Autotools
+autom4te.cache/
+configure
+install-sh
+missing
+py-compile
+symlink-tree
+ypch/
+aclocal.m4
+build-aux/
+compile
+config.guess
+config.log
+config.rpath
+config.status
+depcomp
+ltmain.sh
+mkinstalldirs
+test-driver
+
+# Editor/IDE
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*~
+*.bak
+*.orig
+
+# Logs & temp
+*.log
+*.tmp
 modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-# debug information files
-*.dwo
-
-resources.c
-calc
