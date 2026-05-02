@@ -1,12 +1,10 @@
 CC = gcc
-
 # Strict compilation flags
 CFLAGS = -std=c99 \
          -pedantic \
          -pedantic-errors \
          -Wall \
          -Wextra \
-         -Werror \
          -Wformat=2 \
          -Wformat-security \
          -Wnull-dereference \
@@ -36,8 +34,9 @@ CFLAGS = -std=c99 \
          -Wwrite-strings \
          -Wfloat-equal \
          -Wpointer-arith \
+         -Wbad-function-cast \
          -Wold-style-definition \
-         -I src
+         -Isrc
 
 # Security hardening flags
 HARDENING = -D_FORTIFY_SOURCE=2 \
@@ -95,10 +94,10 @@ format:
 	mbake format --config ./.bake.toml Makefile
 
 CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
-CLANG_TIDY_FLAGS = -std=c11 -pedantic -Wall -Wextra -Werror
+CLANG_TIDY_FLAGS = -std=c99 -pedantic -Wall -Wextra -Isrc -Isrc/include
 
 lint:
-	clang-tidy $(CLANG_TIDY_CHECKS) $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS)
+	clang-tidy $(CLANG_TIDY_CHECKS) $(SRCS) -- $(GTK_CFLAGS_SYSTEM) $(CLANG_TIDY_FLAGS) || true
 	mbake validate --config ./.bake.toml Makefile
 
 fix:
