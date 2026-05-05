@@ -57,7 +57,7 @@ int main(int argc, char** argv)
 		int status;
 
 		printf("Starting GUI mode...\n");
-		app = gtk_application_new("org.gtk.calc", G_APPLICATION_DEFAULT_FLAGS);
+		app = gtk_application_new("org.mini.calc", G_APPLICATION_DEFAULT_FLAGS);
 		g_signal_connect(app, "activate", G_CALLBACK(ui_show), NULL);
 		printf("Running GtkApplication...\n");
 		status = g_application_run(G_APPLICATION(app), argc, argv);
