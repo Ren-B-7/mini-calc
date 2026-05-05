@@ -33,24 +33,27 @@ typedef struct {
 	const char* description;
 } CliInitParams;
 
+#define DEFAULT_ARG_CAPACITY 10
+
 static inline int cli_init(CliParser* parser, CliInitParams params)
 {
 	parser->name = params.name;
 	parser->description = params.description;
 	parser->arg_count = 0;
-	parser->arg_capacity = 10;
+	parser->arg_capacity = DEFAULT_ARG_CAPACITY;
 	parser->registered_args =
 	 (CliArgument*) malloc(sizeof(CliArgument) * parser->arg_capacity);
 	return set_init(&parser->arguments);
 }
-static inline int cli_add_argument(CliParser* parser, CliArgument arg)
+
+static void cli_add_argument(CliParser* parser, CliArgument arg)
 {
 	if (parser->arg_count >= parser->arg_capacity) {
 		parser->arg_capacity *= 2;
 		CliArgument* temp = (CliArgument*) realloc(parser->registered_args,
 		 sizeof(CliArgument) * parser->arg_capacity);
 		if (!temp) {
-			return -1;
+			return;
 		}
 		parser->registered_args = temp;
 	}
@@ -59,24 +62,36 @@ static inline int cli_add_argument(CliParser* parser, CliArgument arg)
 	if (arg.shorthand) {
 		set_add_str(&parser->arguments, arg.shorthand);
 	}
-	return 0;
+}
+
+static inline void cli_print_help(const CliParser* parser)
+{
+	printf("Usage: %s [options]\n\n", parser->name);
+	printf("%s\n\n", parser->description);
+	printf("Options:\n");
+	for (size_t i = 0; i < parser->arg_count; i++) {
+		const CliArgument* arg = &parser->registered_args[i];
+		if (arg->shorthand) {
+			printf("  %-16s %-4s  %s\n", arg->name, arg->shorthand,
+			 arg->description);
+		} else {
+			printf("  %-16s       %s\n", arg->name, arg->description);
+		}
+	}
+	printf("  %-16s %-4s  %s\n", "--help", "-h", "Display this help");
 }
 
 static inline void cli_parse(CliParser* parser, int argc, char** argv)
 {
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
-			printf("Usage: %s\n%s\n\nArguments:\n", parser->name, parser->description);
-			for (size_t j = 0; j < parser->arg_count; j++) {
-				printf("  %-10s %-10s %s\n", parser->registered_args[j].shorthand ? parser->registered_args[j].shorthand : "", parser->registered_args[j].name, parser->registered_args[j].description);
-			}
-			exit(EXIT_SUCCESS);
+			cli_print_help(parser);
+			return;
 		}
 		for (size_t j = 0; j < parser->arg_count; j++) {
 			if (strcmp(argv[i], parser->registered_args[j].name) == 0 ||
 			 (parser->registered_args[j].shorthand &&
 			  strcmp(argv[i], parser->registered_args[j].shorthand) == 0)) {
-				// Simple callback execution: pass remaining args
 				parser->registered_args[j].callback(argc - i - 1, &argv[i + 1],
 				 parser->registered_args[j].user_data);
 				return;
