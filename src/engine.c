@@ -24,47 +24,46 @@ typedef struct {
 	int top;
 } CharStack;
 
-static inline int
-dstack_push(DoubleStack* stack, double val, const char** error)
+static inline int dstack_push(DoubleStack* stk, double val, const char** err)
 {
-	if (stack->top >= MAX_STACK - 1) {
-		if (error && !*error) {
-			*error = "Value stack overflow";
+	if (stk->top >= MAX_STACK - 1) {
+		if (err && !*err) {
+			*err = "Value stack overflow";
 		}
 		return 0;
 	}
-	stack->data[++(stack->top)] = val;
+	stk->data[++(stk->top)] = val;
 	return 1;
 }
 
-static inline double dstack_pop(DoubleStack* stack)
+static inline double dstack_pop(DoubleStack* stk)
 {
-	return (stack->top >= 0) ? stack->data[(stack->top)--] : 0.0;
+	return (stk->top >= 0) ? stk->data[(stk->top)--] : 0.0;
 }
 
-static inline int cstack_push(CharStack* stack, char val, const char** error)
+static inline int cstack_push(CharStack* stk, char val, const char** err)
 {
-	if (stack->top >= MAX_STACK - 1) {
-		if (error && !*error) {
-			*error = "Operator stack overflow";
+	if (stk->top >= MAX_STACK - 1) {
+		if (err && !*err) {
+			*err = "Operator stack overflow";
 		}
 		return 0;
 	}
-	stack->data[++(stack->top)] = val;
+	stk->data[++(stk->top)] = val;
 	return 1;
 }
 
-static inline char cstack_pop(CharStack* stack)
+static inline char cstack_pop(CharStack* stk)
 {
-	return (stack->top >= 0) ? stack->data[(stack->top)--] : '\0';
+	return (stk->top >= 0) ? stk->data[(stk->top)--] : '\0';
 }
 
-static inline char cstack_peek(CharStack* stack)
+static inline char cstack_peek(CharStack* stk)
 {
-	return (stack->top >= 0) ? stack->data[stack->top] : '\0';
+	return (stk->top >= 0) ? stk->data[stk->top] : '\0';
 }
 
-static int precedence(char op_char)
+static int get_prec(char op_char)
 {
 	switch (op_char) {
 	case '+':
@@ -83,8 +82,58 @@ static int precedence(char op_char)
 	}
 }
 
+static double apply_div(double operand_a, double operand_b, const char** err)
+{
+	if (fabs(operand_b) < CALC_EPSILON) {
+		if (err && !*err) {
+			*err = "Division by zero";
+		}
+		return 0.0;
+	}
+	return operand_a / operand_b;
+}
+
+static double apply_mod(double operand_a, double operand_b, const char** err)
+{
+	if (fabs(operand_b) < CALC_EPSILON) {
+		if (err && !*err) {
+			*err = "Modulo by zero";
+		}
+		return 0.0;
+	}
+	return fmod(operand_a, operand_b);
+}
+
+static double apply_pow(double operand_a, double operand_b, const char** err)
+{
+	if (fabs(operand_a) < CALC_EPSILON && operand_b < 0.0) {
+		if (err && !*err) {
+			*err = "Zero to a negative power is undefined";
+		}
+		return 0.0;
+	}
+	if (operand_a < 0.0 && fabs(floor(operand_b) - operand_b) > CALC_EPSILON) {
+		if (err && !*err) {
+			*err = "Negative base with fractional exponent";
+		}
+		return 0.0;
+	}
+	return pow(operand_a, operand_b);
+}
+
+static double apply_sqrt(double operand_b, const char** err)
+{
+	if (operand_b < 0.0) {
+		if (err && !*err) {
+			*err = "Square root of negative number";
+		}
+		return 0.0;
+	}
+	return sqrt(operand_b);
+}
+
 static double apply_op(double operand_a, double operand_b, OperatorType op_type,
- const char** error) /* NOLINT(bugprone-easily-swappable-parameters) */
+ const char** err)
 {
 	switch (op_type) {
 	case OP_ADD:
@@ -94,44 +143,13 @@ static double apply_op(double operand_a, double operand_b, OperatorType op_type,
 	case OP_MUL:
 		return operand_a * operand_b;
 	case OP_DIV:
-		if (fabs(operand_b) < CALC_EPSILON) {
-			if (error && !*error) {
-				*error = "Division by zero";
-			}
-			return 0.0;
-		}
-		return operand_a / operand_b;
+		return apply_div(operand_a, operand_b, err);
 	case OP_MOD:
-		if (fabs(operand_b) < CALC_EPSILON) {
-			if (error && !*error) {
-				*error = "Modulo by zero";
-			}
-			return 0.0;
-		}
-		return fmod(operand_a, operand_b);
+		return apply_mod(operand_a, operand_b, err);
 	case OP_POW:
-		if (fabs(operand_a) < CALC_EPSILON && operand_b < 0.0) {
-			if (error && !*error) {
-				*error = "Zero to a negative power is undefined";
-			}
-			return 0.0;
-		}
-		if (operand_a < 0.0 &&
-		 fabs(floor(operand_b) - operand_b) > CALC_EPSILON) {
-			if (error && !*error) {
-				*error = "Negative base with fractional exponent";
-			}
-			return 0.0;
-		}
-		return pow(operand_a, operand_b);
+		return apply_pow(operand_a, operand_b, err);
 	case OP_SQRT:
-		if (operand_b < 0.0) {
-			if (error && !*error) {
-				*error = "Square root of negative number";
-			}
-			return 0.0;
-		}
-		return sqrt(operand_b);
+		return apply_sqrt(operand_b, err);
 	default:
 		return 0.0;
 	}
@@ -159,157 +177,136 @@ static OperatorType char_to_op(char op_char)
 	}
 }
 
-static int
-process_top_op(DoubleStack* values, CharStack* ops, const char** current_err)
+static int proc_top(DoubleStack* vals, CharStack* ops, const char** err)
 {
-	char oper_char = cstack_pop(ops);
-	double val2 = dstack_pop(values);
-	OperatorType op_type = char_to_op(oper_char);
-
+	char op_char = cstack_pop(ops);
+	double val2 = dstack_pop(vals);
+	OperatorType op_type = char_to_op(op_char);
 	if (op_type == OP_SQRT) {
-		if (!dstack_push(values, apply_op(0.0, val2, OP_SQRT, current_err),
-		     current_err)) {
+		if (!dstack_push(vals, apply_op(0.0, val2, OP_SQRT, err), err)) {
 			return 0;
 		}
 	} else if (op_type != OP_NONE) {
-		double val1 = dstack_pop(values);
-		if (!dstack_push(values, apply_op(val1, val2, op_type, current_err),
-		     current_err)) {
+		double val1 = dstack_pop(vals);
+		if (!dstack_push(vals, apply_op(val1, val2, op_type, err), err)) {
 			return 0;
 		}
 	}
-	return (*current_err == NULL);
+	return (*err == NULL);
 }
 
-static int handle_parentheses(char curr_char, DoubleStack* values,
- CharStack* ops, const char** current_err)
+static int handle_paren(char paren_char, DoubleStack* vals, CharStack* ops,
+ const char** err)
 {
-	if (curr_char == '(') {
-		return cstack_push(ops, '(', current_err);
+	if (paren_char == '(') {
+		return cstack_push(ops, '(', err);
 	}
 	while (ops->top >= 0 && cstack_peek(ops) != '(') {
-		if (!process_top_op(values, ops, current_err)) {
+		if (!proc_top(vals, ops, err)) {
 			return 0;
 		}
 	}
 	if (ops->top < 0) {
-		*current_err = "Mismatched parentheses";
+		*err = "Mismatched parentheses";
 		return 0;
 	}
 	cstack_pop(ops);
 	if (ops->top >= 0 && cstack_peek(ops) == 's') {
-		return process_top_op(values, ops, current_err);
+		return proc_top(vals, ops, err);
 	}
 	return 1;
 }
 
-static int handle_operator_token(char curr_op, const char* clean_expr, int idx,
- DoubleStack* values, CharStack* ops, const char** current_err)
+static int handle_op_tok(char curr_op, const char* expression, int idx,
+ DoubleStack* vals, CharStack* ops, const char** err)
 {
-	int is_unary =
-	 (curr_op == '-' && (idx == 0 || (idx > 0 && clean_expr[idx - 1] == '(')));
-	if (is_unary) {
-		if (!dstack_push(values, 0.0, current_err)) {
+	if (curr_op == '-' &&
+	 (idx == 0 || (idx > 0 && expression[idx - 1] == '('))) {
+		if (!dstack_push(vals, 0.0, err)) {
 			return 0;
 		}
 	}
 	while (ops->top >= 0 &&
 	 (curr_op == '^' ?
-	   precedence(cstack_peek(ops)) > precedence(curr_op) :
-	   precedence(cstack_peek(ops)) >= precedence(curr_op))) {
-		if (!process_top_op(values, ops, current_err)) {
+	   get_prec(cstack_peek(ops)) > get_prec(curr_op) :
+	   get_prec(cstack_peek(ops)) >= get_prec(curr_op))) {
+		if (!proc_top(vals, ops, err)) {
 			return 0;
 		}
 	}
-	return cstack_push(ops, curr_op, current_err);
+	return cstack_push(ops, curr_op, err);
 }
 
-static int handle_token(const char* clean_expr, int clean_len, int idx,
- DoubleStack* values, CharStack* ops, const char** current_err, int* next_idx)
+static int handle_tok(const char* expression, int len, int idx,
+ DoubleStack* vals, CharStack* ops, const char** err, int* next)
 {
-	char curr_char;
-	if (idx < 0 || idx >= clean_len) {
+	if (idx < 0 || idx >= len) {
 		return 0;
 	}
-	curr_char = clean_expr[idx];
-	*next_idx = idx;
-
+	char curr_char = expression[idx];
+	*next = idx;
 	if (isdigit((unsigned char) curr_char) || curr_char == '.') {
 		char* end_ptr;
-		double val = g_ascii_strtod(clean_expr + idx, &end_ptr);
-		if (!dstack_push(values, val, current_err)) {
+		double val = g_ascii_strtod(expression + idx, &end_ptr);
+		if (!dstack_push(vals, val, err)) {
 			return 0;
 		}
-		*next_idx = (int) (end_ptr - clean_expr) - 1;
-	} else if (curr_char == 'P' && idx + 1 < clean_len &&
-	 clean_expr[idx + 1] == 'I') {
-		*next_idx = idx + 1;
-		return dstack_push(values, M_PI, current_err);
+		*next = (int) (end_ptr - expression) - 1;
+	} else if (curr_char == 'P' && idx + 1 < len &&
+	 expression[idx + 1] == 'I') {
+		*next = idx + 1;
+		return dstack_push(vals, M_PI, err);
 	} else if (curr_char == 'E' &&
-	 (idx + 1 >= clean_len || !isalpha((unsigned char) clean_expr[idx + 1]))) {
-		return dstack_push(values, M_E, current_err);
-	} else if (strncmp(clean_expr + idx, "sqrt", 4) == 0) {
-		*next_idx = idx + 3;
-		return cstack_push(ops, 's', current_err);
+	 (idx + 1 >= len || !isalpha((unsigned char) expression[idx + 1]))) {
+		return dstack_push(vals, M_E, err);
+	} else if (strncmp(expression + idx, "sqrt", 4) == 0) {
+		*next = idx + 3;
+		return cstack_push(ops, 's', err);
 	} else if (curr_char == '(' || curr_char == ')') {
-		return handle_parentheses(curr_char, values, ops, current_err);
+		return handle_paren(curr_char, vals, ops, err);
 	} else {
-		return handle_operator_token(curr_char, clean_expr, idx, values, ops,
-		 current_err);
+		return handle_op_tok(curr_char, expression, idx, vals, ops, err);
 	}
 	return 1;
 }
 
 double engine_eval(const char* expression, char** error_msg)
 {
-	DoubleStack values = {{0.0}, -1};
+	DoubleStack vals = {{0.0}, -1};
 	CharStack ops = {{'\0'}, -1};
-	const char* current_err = NULL;
-	char* clean_expr = NULL;
-	int clean_len = 0;
-	const char* ptr;
-	int idx;
-
-	if (!expression) {
-		return 0.0;
-	}
-	clean_expr = calloc(1, strlen(expression) + 1);
-	if (!clean_expr) {
-		return 0.0;
-	}
-	for (ptr = expression; *ptr; ptr++) {
+	const char* err = NULL;
+	char* cln = calloc(1, strlen(expression) + 1);
+	int len = 0;
+	for (const char* ptr = expression; *ptr; ptr++) {
 		if (!isspace((unsigned char) *ptr)) {
-			clean_expr[clean_len++] = *ptr;
+			cln[len++] = *ptr;
 		}
 	}
-	clean_expr[clean_len] = '\0';
-	for (idx = 0; idx < clean_len; idx++) {
-		int next_idx = idx;
-		if (!handle_token(clean_expr, clean_len, idx, &values, &ops,
-		     &current_err, &next_idx)) {
+	cln[len] = '\0';
+	for (int idx = 0; idx < len; idx++) {
+		int next = idx;
+		if (!handle_tok(cln, len, idx, &vals, &ops, &err, &next)) {
 			goto error;
 		}
-		idx = next_idx;
+		idx = next;
 	}
 	while (ops.top >= 0) {
 		if (cstack_peek(&ops) == '(') {
-			current_err = "Mismatched parentheses";
+			err = "Mismatched parentheses";
 			goto error;
 		}
-		if (!process_top_op(&values, &ops, &current_err)) {
+		if (!proc_top(&vals, &ops, &err)) {
 			goto error;
 		}
 	}
-	{
-		double final_val = dstack_pop(&values);
-		free(clean_expr);
-		return final_val;
-	}
+	double res = dstack_pop(&vals);
+	free(cln);
+	return res;
 error:
 	if (error_msg) {
-		*error_msg = g_strdup(current_err);
+		*error_msg = g_strdup(err);
 	}
-	free(clean_expr);
+	free(cln);
 	return 0.0;
 }
 
@@ -317,12 +314,12 @@ void engine_format_output(char* buf, size_t len, double val)
 {
 	snprintf(buf, len, "%.*f", CALC_PRECISION, val);
 	if (strchr(buf, '.')) {
-		char* ptr_ptr = buf + strlen(buf) - 1;
-		while (ptr_ptr > buf && *ptr_ptr == '0') {
-			*ptr_ptr-- = '\0';
+		char* ptr = buf + strlen(buf) - 1;
+		while (ptr > buf && *ptr == '0') {
+			*ptr-- = '\0';
 		}
-		if (ptr_ptr > buf && *ptr_ptr == '.') {
-			*ptr_ptr = '\0';
+		if (ptr > buf && *ptr == '.') {
+			*ptr = '\0';
 		}
 	}
 }

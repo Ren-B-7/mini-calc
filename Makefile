@@ -36,6 +36,7 @@ CFLAGS = -std=c99 \
          -Wpointer-arith \
          -Wbad-function-cast \
          -Wold-style-definition \
+         -Wstringop-truncation \
          -Isrc
 
 # Security hardening flags
@@ -93,7 +94,7 @@ format:
 	clang-format -style=file:./.clang-format -i $(SRCS) $(HEADERS)
 	mbake format --config ./.bake.toml Makefile
 
-CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling
+CLANG_TIDY_CHECKS = -checks=-bugprone-easily-swappable-parameters,-clang-analyzer-security.insecureAPI.DeprecatedOrUnsafeBufferHandling,-readability-identifier-length,-readability-function-cognitive-complexity
 CLANG_TIDY_FLAGS = -std=c99 -pedantic -Wall -Wextra -Isrc -Isrc/include
 
 lint:

@@ -1,24 +1,181 @@
-/* Light Mode Defaults */
-window { background-color: #f2f2f7; }
-grid { padding: 10px; }
-entry { background: transparent; color: #000000; border: none; font-size: 20px; padding: 5px; }
-entry.history { font-size: 14px; color: #666666; }
-entry.input { font-size: 28px; font-weight: bold; }
-button { background: #ffffff; background-image: none; color: #000000; border: 1px solid #d1d1d6; font-size: 16px; padding: 10px; border-radius: 5px; }
-button:hover { background: #e5e5ea; }
-button.operator { background: #ff9500; color: #ffffff; border: none; }
-button.clear { background: #ff3b30; color: #ffffff; border: none; }
-button.equal { background: #007aff; color: #ffffff; border: none; }
-button.scientific { background: #e5e5ea; color: #000000; border: 1px solid #c7c7cc; }
+/* ============================================================
+   Mini Calc — Modern GTK3 Stylesheet
+   Matches mini-timer design language.
+   Supports: .dark class on the window for theme toggle
+   ============================================================ */
 
-/* Dark Mode Overrides */
-window.dark { background-color: #1e1e1e; }
-window.dark entry { background: #2d2d2d; color: #ffffff; border: 1px solid #3d3d3d; }
-window.dark entry.history { color: #888888; background: transparent; border: none; }
-window.dark entry.input { color: #ffffff; background: transparent; border: none; }
-window.dark button { background: #333333; background-image: none; color: #ffffff; border: 1px solid #444444; }
-window.dark button:hover { background: #444444; }
-window.dark button.scientific { background: #2c2c2e; color: #ffffff; border: 1px solid #3a3a3c; }
-window.dark button.operator { background: #ff9500; color: #ffffff; border: none; }
-window.dark button.clear { background: #ff3b30; color: #ffffff; border: none; }
-window.dark button.equal { background: #007aff; color: #ffffff; border: none; }
+* {
+  font-family: "JetBrains Mono", "Fira Mono", "Cascadia Code", monospace;
+}
+
+window {
+  background-color: #f0ece4;
+  transition: background-color 300ms ease;
+}
+
+window.dark {
+  background-color: #0f1117;
+}
+
+grid {
+  padding: 10px 12px 14px 12px;
+  background-color: transparent;
+}
+
+/* ── Entry: shared base ── */
+entry {
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+  color: #1a1a2e;
+  padding: 4px 6px;
+  caret-color: #5a7fbf;
+}
+
+entry.history {
+  font-size: 13px;
+  color: #8a8070;
+  letter-spacing: 1px;
+}
+
+entry.input {
+  font-size: 32px;
+  font-weight: bold;
+  letter-spacing: 2px;
+}
+
+window.dark entry {
+  color: #e8f4f8;
+  background-color: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+window.dark entry.history {
+  color: #4a5568;
+}
+
+/* ── Buttons: shared base ── */
+button {
+  background-color: #e8e2d9;
+  background-image: none;
+  border-radius: 10px;
+  border: 1px solid #cdc7bc;
+  color: #1a1a2e;
+  font-size: 15px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  padding: 10px;
+  transition: all 150ms ease;
+}
+
+button:hover {
+  background-color: #ddd8ce;
+}
+
+button:active {
+  opacity: 0.72;
+}
+
+window.dark button {
+  background-color: #1e2130;
+  background-image: none;
+  border: 1px solid #2d3348;
+  color: #c9d4e0;
+}
+
+window.dark button:hover {
+  background-color: #242840;
+}
+
+/* ── Operator buttons ── */
+button.operator {
+  background-color: #c07830;
+  background-image: none;
+  border: none;
+  color: #ffffff;
+}
+
+button.operator:hover {
+  background-color: #d08840;
+}
+
+window.dark button.operator {
+  background-color: #b06820;
+}
+
+/* ── Clear / Backspace buttons ── */
+button.clear {
+  background-color: #c0392b;
+  background-image: none;
+  border: none;
+  color: #ffffff;
+}
+
+button.clear:hover {
+  background-color: #d04030;
+}
+
+window.dark button.clear {
+  background-color: #a02820;
+}
+
+/* ── Equals button ── */
+button.equal {
+  background-color: #3a6bbf;
+  background-image: none;
+  border: none;
+  color: #ffffff;
+}
+
+button.equal:hover {
+  background-color: #4a7bcf;
+}
+
+window.dark button.equal {
+  background-color: #4a7bcf;
+}
+
+/* ── Scientific buttons ── */
+button.scientific {
+  background-color: #ddd5c8;
+  background-image: none;
+  border: 1px solid #c4bdb4;
+  color: #3a3228;
+  font-size: 13px;
+}
+
+button.scientific:hover {
+  background-color: #d0c8ba;
+}
+
+window.dark button.scientific {
+  background-color: #161820;
+  border: 1px solid #252838;
+  color: #8896a8;
+}
+
+window.dark button.scientific:hover {
+  background-color: #1e2130;
+}
+
+/* ── Sci toggle (checked state) ── */
+button:checked {
+  background-color: #3a6bbf;
+  color: #ffffff;
+  border-color: #3a6bbf;
+}
+
+window.dark button:checked {
+  background-color: #4a7bcf;
+}
+
+/* ── Separator ── */
+separator {
+  background-color: #d5cfc6;
+  margin: 4px 0;
+}
+
+window.dark separator {
+  background-color: #1e2130;
+}

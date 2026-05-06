@@ -268,7 +268,7 @@ static void setup_theme(GtkWidget* window)
 	char* theme_name = NULL;
 	g_object_get(settings, "gtk-application-prefer-dark-theme", &prefer_dark,
 	 "gtk-theme-name", &theme_name, NULL);
-	gtk_css_provider_load_from_resource(provider, "/org/gtk/calc/style.css");
+	gtk_css_provider_load_from_resource(provider, "/org/mini/calc/style.css");
 	gtk_style_context_add_provider_for_screen(screen,
 	 GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
 	if ((theme_name && strstr(theme_name, "-dark")) || prefer_dark) {
