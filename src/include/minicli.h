@@ -81,11 +81,43 @@ static inline void cli_print_help(const CliParser* parser)
 	printf("  %-16s %-4s  %s\n", "--help", "-h", "Display this help");
 }
 
+static inline void cli_print_completions(const CliParser* parser, const char* shell)
+{
+	if (strcmp(shell, "bash") == 0) {
+		printf("_%s_completions()\n", parser->name);
+		printf("{\n");
+		printf("    local cur=\"${COMP_WORDS[COMP_CWORD]}\"\n");
+		printf("    COMPREPLY=( $(compgen -W \"");
+		for (size_t i = 0; i < parser->arg_count; i++) {
+			printf("%s ", parser->registered_args[i].name);
+			if (parser->registered_args[i].shorthand)
+				printf("%s ", parser->registered_args[i].shorthand);
+		}
+		printf("--help -h\" -- \"$cur\") )\n");
+		printf("}\n");
+		printf("complete -F _%s_completions %s\n", parser->name, parser->name);
+	} else if (strcmp(shell, "zsh") == 0) {
+		printf("#compdef %s\n", parser->name);
+		printf("_arguments \\\n");
+		for (size_t i = 0; i < parser->arg_count; i++) {
+			printf("  '%s[%s]' \\\n", parser->registered_args[i].name, parser->registered_args[i].description);
+			if (parser->registered_args[i].shorthand)
+				printf("  '%s[%s]' \\\n", parser->registered_args[i].shorthand, parser->registered_args[i].description);
+		}
+		printf("  '--help[Display this help]' \\\n");
+		printf("  '-h[Display this help]'\n");
+	}
+}
+
 static inline void cli_parse(CliParser* parser, int argc, char** argv)
 {
 	for (int i = 1; i < argc; i++) {
 		if (strcmp(argv[i], "--help") == 0 || strcmp(argv[i], "-h") == 0) {
 			cli_print_help(parser);
+			return;
+		}
+		if (strcmp(argv[i], "--completions") == 0 && i + 1 < argc) {
+			cli_print_completions(parser, argv[i + 1]);
 			return;
 		}
 		for (size_t j = 0; j < parser->arg_count; j++) {
